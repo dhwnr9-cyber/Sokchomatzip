@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- ⚠️ 네이버 서치어드바이저 인증코드는 도메인마다 새로 발급받아야 합니다.
+     사이트 등록 후 아래 content 값을 새로 받은 코드로 교체하세요. -->
+<meta name="naver-site-verification" content="여기에_속초용_새_인증코드" />
+<title>속초맛집 지도 | 속초 맛집지도 — 실시간 혼잡도·카페·소품샵·축제소식</title>
+<meta name="description" content="속초맛집 실시간 혼잡도 지도. 중앙시장 먹거리촌, 아바이마을, 영랑호 카페거리, 대포항 소품샵까지 한눈에 보고, 속초 축제·행사 소식도 자동으로 확인하세요.">
+<link rel="canonical" href="https://sokchomatzip.co.kr/">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="속초맛집 지도 — 실시간 혼잡도·카페·소품샵">
+<meta property="og:description" content="속초 중앙시장, 아바이마을, 영랑호 카페거리, 대포항 소품샵까지 실시간 혼잡도로 한눈에. 속초 축제·행사 소식도 자동 업데이트.">
+<meta property="og:url" content="https://sokchomatzip.co.kr/">
+<meta property="og:image" content="https://sokchomatzip.co.kr/og-image.png">
+<meta property="og:locale" content="ko_KR">
+
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/favicon-180.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/favicon.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.3/leaflet-maplibre-gl.js"></script>
+<style>
+  :root{
+    --ink:#13293D; --paper:#F5F8FA; --sea:#2D6E8E;
+    --free:#1F9D6B; --normal:#F0A93B; --busy:#E5484D; --verybusy:#B3202C;
+    --radius:14px; font-size:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;color:var(--ink);background:var(--paper);}
+
+  /* ═══════ 페이지 레이아웃: 지도는 페이지 "안"에, 광고는 지도 "옆"에 ═══════ */
+  .page{max-width:1440px;margin:0 auto;padding:16px;}
+  .site-header{margin-bottom:12px;}
+  .brand{display:flex;align-items:baseline;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+  .brand h1{font-size:1.3rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
+  .brand .live{font-size:.7rem;font-weight:700;color:#fff;background:var(--sea);padding:4px 8px;border-radius:8px;}
+  .brand .src{font-size:.62rem;font-weight:700;color:#fff;padding:4px 7px;border-radius:8px;}
+  .src.real{background:#1F9D6B;} .src.demo{background:#8fa3b3;}
+  .visitor-badge{display:none;align-items:center;gap:6px;width:fit-content;font-size:.72rem;font-weight:700;color:var(--sea);background:#eaf3f7;padding:5px 12px;border-radius:20px;margin-bottom:10px;}
+  .visitor-badge.show{display:inline-flex;}
+  .visitor-badge .vdot{width:6px;height:6px;border-radius:50%;background:#1F9D6B;flex:none;}
+  .searchwrap{position:relative;}
+  .searchbox{display:flex;align-items:center;gap:8px;background:#fff;border-radius:var(--radius);box-shadow:0 4px 14px rgba(19,41,61,.12);padding:12px 14px;}
+  .searchbox svg{flex:none;}
+  .searchbox input{flex:1;border:none;outline:none;font-size:1rem;color:var(--ink);background:transparent;}
+  .searchbox input::placeholder{color:#8fa3b3;}
+  .results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border-radius:var(--radius);box-shadow:0 8px 24px rgba(19,41,61,.22);max-height:280px;overflow-y:auto;display:none;z-index:1200;}
+  .results.show{display:block;}
+  .result-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;border-bottom:1px solid #eef2f5;}
+  .result-item:last-child{border-bottom:none;}
+  .result-item:active{background:#f0f5f8;}
+  .result-item .r-name{font-weight:700;font-size:.95rem;}
+  .result-item .r-cat{font-size:.75rem;color:#7a8fa0;margin-top:2px;}
+  .result-empty{padding:16px;text-align:center;color:#8fa3b3;font-size:.9rem;}
+
+  .layout{display:flex;gap:14px;align-items:stretch;}
+  .ad-col{width:180px;flex:none;display:flex;flex-direction:column;gap:10px;position:relative;}
+  .ad-row{display:flex;flex-direction:column;gap:10px;flex:1;}
+  .ad-slot{flex:1;min-height:200px;background:linear-gradient(160deg,#eaf1f5,#d9e6ee);border:1px dashed #a9c0cf;border-radius:12px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+  .ad-slot.filled{border-style:solid;border-color:#e5eaee;background:#fff;box-shadow:0 3px 10px rgba(19,41,61,.08);transition:transform .15s ease,box-shadow .15s ease;}
+  .ad-slot.filled:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(19,41,61,.14);}
+  .ad-slot .ad-tag{position:absolute;top:6px;left:8px;font-size:.6rem;font-weight:800;color:#5d7284;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:6px;z-index:2;}
+  .ad-slot.filled .ad-tag{color:#8fa3b3;background:#f2f5f7;}
+  .ad-slot .ad-inner{font-size:.8rem;font-weight:700;color:#5d7284;text-align:center;padding:8px;}
+  .ad-slot img{width:100%;height:100%;object-fit:cover;}
+  .ad-slot a{display:flex;width:100%;height:100%;align-items:center;justify-content:center;text-decoration:none;color:inherit;}
+  .ad-emoji{width:34px;height:34px;line-height:34px;border-radius:50%;background:var(--sea);color:#fff;font-size:1.05rem;margin:0 auto 7px;}
+  .ad-title{font-size:.85rem;font-weight:800;color:var(--ink);margin-bottom:4px;line-height:1.3;}
+  .ad-sub{font-size:.66rem;color:#8fa3b3;line-height:1.4;}
+  .ad-contact{font-size:.68rem;color:#8fa3b3;text-align:center;line-height:1.5;padding:4px 2px;}
+  .ad-contact b{color:var(--sea);}
+
+  .map-card{flex:1;min-width:0;position:relative;height:75vh;min-height:420px;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(19,41,61,.18);background:#e3ebf0;}
+  #map{position:absolute;inset:0;}
+
+  /* ═══ 축제·행사 소식 패널 (지도 하단, 페이지 안) ═══ */
+  .news-panel{margin-top:14px;background:#fff;border-radius:16px;box-shadow:0 4px 16px rgba(19,41,61,.1);padding:16px 18px;}
+  .news-panel h2{font-size:.95rem;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+  .news-panel h2 .tag{font-size:.62rem;font-weight:700;color:#fff;background:var(--sea);padding:3px 8px;border-radius:8px;}
+  .news-list{display:flex;flex-direction:column;gap:2px;}
+  .news-item{display:flex;align-items:baseline;gap:10px;padding:9px 4px;border-bottom:1px solid #f0f3f5;text-decoration:none;color:inherit;}
+  .news-item:last-child{border-bottom:none;}
+  .news-item:hover{background:#f7fafb;}
+  .news-item .n-title{flex:1;font-size:.85rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .news-item .n-date{flex:none;font-size:.72rem;color:#8fa3b3;}
+  .news-empty{font-size:.8rem;color:#8fa3b3;padding:6px 4px;}
+  .news-empty a{color:var(--sea);font-weight:700;}
+
+  .seo-list{margin-top:14px;background:#fff;border-radius:16px;box-shadow:0 4px 16px rgba(19,41,61,.1);padding:16px 18px;}
+  .seo-list summary{cursor:pointer;font-weight:800;font-size:.9rem;color:var(--ink);}
+  .seo-intro{font-size:.78rem;color:#7a8fa0;margin:10px 0 16px;line-height:1.6;}
+  .seo-zone{margin-bottom:14px;}
+  .seo-zone h3{font-size:.82rem;color:var(--sea);margin-bottom:6px;}
+  .seo-zone ul{list-style:none;display:flex;flex-wrap:wrap;gap:6px 14px;padding:0;}
+  .seo-zone li{font-size:.76rem;color:#5d7284;}
+  .seo-zone li span{color:#a9bac6;}
+
+  .legend{position:absolute;top:12px;right:12px;z-index:900;background:rgba(255,255,255,.94);border-radius:12px;padding:10px 12px;box-shadow:0 2px 10px rgba(19,41,61,.15);font-size:.72rem;line-height:1.9;}
+  .legend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  .datanote{position:absolute;bottom:12px;left:12px;z-index:900;background:rgba(19,41,61,.85);color:#dce8f0;font-size:.68rem;padding:6px 10px;border-radius:8px;max-width:60%;}
+
+  .tilewarn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:850;background:#fff;color:var(--ink);border-radius:14px;padding:18px 20px;max-width:80%;text-align:center;font-size:.85rem;line-height:1.6;box-shadow:0 8px 30px rgba(19,41,61,.28);display:none;}
+  .tilewarn b{color:var(--sea);}
+  .tilewarn.show{display:block;}
+  .tilewarn button{margin-top:12px;border:none;background:#eef2f5;color:#5d7284;padding:8px 14px;border-radius:10px;font-size:.8rem;font-weight:700;}
+
+  .locate-btn{position:absolute;right:12px;bottom:70px;z-index:900;width:44px;height:44px;border-radius:12px;background:#fff;border:none;box-shadow:0 3px 12px rgba(19,41,61,.22);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .locate-btn svg{stroke:var(--sea);}
+  .locate-btn.on svg{stroke:#fff;} .locate-btn.on{background:var(--sea);}
+
+  .toast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%) translateY(20px);z-index:1000;background:rgba(19,41,61,.94);color:#fff;font-size:.82rem;font-weight:600;padding:10px 16px;border-radius:22px;opacity:0;transition:.25s;pointer-events:none;max-width:85%;text-align:center;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .userdot{width:18px;height:18px;border-radius:50%;background:#2D6E8E;border:3px solid #fff;box-shadow:0 0 0 4px rgba(45,110,142,.3);transform:translate(-50%,-50%);}
+  .userdot::after{content:'';position:absolute;inset:-3px;border-radius:50%;animation:upulse 1.8s infinite;}
+  @keyframes upulse{0%{box-shadow:0 0 0 0 rgba(45,110,142,.4);}70%{box-shadow:0 0 0 14px rgba(45,110,142,0);}100%{box-shadow:0 0 0 0 rgba(45,110,142,0);}}
+
+  .pin{transform:translate(-50%,-50%);}
+  .pin .dotpin{width:22px;height:22px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(19,41,61,.35);}
+  .pin .label{position:absolute;left:26px;top:50%;transform:translateY(-50%);background:#fff;border-radius:8px;padding:3px 8px;font-size:.72rem;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(19,41,61,.22);border-left:3px solid;}
+  .pin.hideLabel .label{display:none;}
+  .pin.sel .dotpin{width:26px;height:26px;box-shadow:0 0 0 4px rgba(45,110,142,.35),0 2px 8px rgba(19,41,61,.4);}
+  .pin.busy .dotpin,.pin.verybusy .dotpin{animation:pulse 1.6s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(229,72,77,.5);}70%{box-shadow:0 0 0 10px rgba(229,72,77,0);}100%{box-shadow:0 0 0 0 rgba(229,72,77,0);}}
+  @media (prefers-reduced-motion:reduce){.pin .dotpin,.userdot::after{animation:none!important;}}
+
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:1100;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 30px rgba(19,41,61,.25);padding:10px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .28s ease;max-height:74vh;overflow-y:auto;max-width:1440px;margin:0 auto;left:0;right:0;}
+  .sheet.open{transform:translateY(0);}
+  .grab{width:42px;height:4px;background:#d7e0e7;border-radius:2px;margin:0 auto 12px;}
+  .s-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .s-name{font-size:1.25rem;font-weight:800;letter-spacing:-.02em;}
+  .s-cat{font-size:.8rem;color:#7a8fa0;margin-top:3px;}
+  .s-dist{font-size:.75rem;color:var(--sea);font-weight:700;margin-top:4px;}
+  .s-close{flex:none;border:none;background:#eef2f5;color:#5d7284;width:32px;height:32px;border-radius:50%;font-size:1rem;cursor:pointer;}
+  .status{display:flex;align-items:center;gap:12px;margin:16px 0 6px;padding:14px;border-radius:var(--radius);}
+  .status .big{font-size:1.5rem;font-weight:800;color:#fff;}
+  .status .sub{font-size:.78rem;color:rgba(255,255,255,.85);margin-top:2px;}
+  .status .pct{margin-left:auto;text-align:right;color:#fff;}
+  .status .pct b{font-size:1.3rem;}
+  .status .pct span{display:block;font-size:.68rem;opacity:.85;}
+  .srcline{font-size:.72rem;color:#8fa3b3;margin-bottom:14px;padding-left:2px;}
+  .srcline b{color:var(--sea);}
+  .waitline{font-size:.82rem;color:#5d7284;margin-bottom:16px;padding-left:2px;}
+  .chart-title{font-size:.85rem;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
+  .chart-title .hint{font-weight:500;font-size:.72rem;color:#8fa3b3;}
+  .chart{display:flex;align-items:flex-end;gap:3px;height:110px;margin-bottom:4px;}
+  .bar{flex:1;border-radius:4px 4px 0 0;background:#dbe5ec;min-height:4px;position:relative;transition:height .3s ease;}
+  .bar.now{outline:2px solid var(--ink);outline-offset:1px;}
+  .hours{display:flex;gap:3px;font-size:.58rem;color:#8fa3b3;margin-bottom:16px;}
+  .hours span{flex:1;text-align:center;}
+  .slider-row{margin-bottom:8px;}
+  .slider-row label{font-size:.85rem;font-weight:700;display:flex;justify-content:space-between;margin-bottom:8px;}
+  .slider-row label output{color:var(--sea);}
+  input[type=range]{width:100%;accent-color:var(--sea);}
+  .nowbtn{margin-top:10px;width:100%;padding:12px;border:none;border-radius:var(--radius);background:var(--ink);color:#fff;font-size:.95rem;font-weight:700;cursor:pointer;}
+
+  @media (max-width:900px){
+    .page{padding:8px;}
+    .brand h1{font-size:1.05rem;}
+
+    /* 지도 양옆이 아니라 위/아래로: 지도는 넓게, 광고는 상시 노출 */
+    .layout{flex-direction:column;}
+    .ad-col{order:1;width:100%;flex-direction:column;gap:4px;}
+    .ad-col.right{order:3;}
+    .map-card{order:2;height:56vh;}
+    .ad-row{flex-direction:row;gap:8px;}
+    .ad-slot{min-height:80px;}
+    .ad-slot .ad-inner{font-size:.7rem;}
+    .ad-contact{font-size:.62rem;padding:2px;}
+
+    .legend{font-size:.6rem;padding:6px 8px;top:8px;right:8px;}
+    .locate-btn{width:38px;height:38px;bottom:60px;}
+    .news-panel{padding:12px 14px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="site-header">
+    <div class="visitor-badge" id="visitorBadge"><span class="vdot"></span><span id="visitorText">오늘 방문자 -명</span></div>
+    <div class="brand">
+      <h1>속초 맛집지도</h1>
+      <span class="live" id="clock">·</span>
+      <span class="src demo" id="srcBadge">추정</span>
+    </div>
+    <div class="searchwrap">
+      <div class="searchbox">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2D6E8E" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        <input id="search" type="text" placeholder="예: 아바이순대" autocomplete="off">
+      </div>
+      <div class="results" id="results"></div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="ad-col left">
+      <div class="ad-row">
+        <div class="ad-slot filled" id="ad-l1">
+          <span class="ad-tag">AD</span>
+          <a href="https://blog.naver.com/05x" target="_blank" rel="noopener">
+            <div class="ad-inner">
+              <div class="ad-emoji">🎩</div>
+              <div class="ad-title">마술, 배워볼래요?</div>
+              <div class="ad-sub">더매직 블로그<br>마술강의 · FUN한 공연기획</div>
+            </div>
+          </a>
+        </div>
+        <div class="ad-slot filled" id="ad-l2">
+          <span class="ad-tag">AD</span>
+          <a href="https://www.instagram.com/teachbysungbok" target="_blank" rel="noopener">
+            <div class="ad-inner">
+              <div class="ad-emoji">✨</div>
+              <div class="ad-title">강의 속 이야기</div>
+              <div class="ad-sub">더매직 인스타그램<br>@teachbysungbok</div>
+            </div>
+          </a>
+        </div>
+      </div>
+      <div class="ad-contact">광고문의 <b>05x@naver.com</b></div>
+    </aside>
+
+    <div class="map-card" id="mapCard">
+      <div id="map"></div>
+      <button class="locate-btn" id="locateBtn" title="내 위치" aria-label="내 위치">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+      </button>
+      <div class="legend">
+        <div><span class="dot" style="background:var(--free)"></span>여유</div>
+        <div><span class="dot" style="background:var(--normal)"></span>보통</div>
+        <div><span class="dot" style="background:var(--busy)"></span>혼잡</div>
+        <div><span class="dot" style="background:var(--verybusy)"></span>매우 혼잡</div>
+        <div style="margin-top:6px;padding-top:6px;border-top:1px solid #e5eaee;color:#8fa3b3;font-size:.65rem;line-height:1.6;">
+          큰 원 = 지역 전체 밀집도<br>작은 점 = 개별 가게
+        </div>
+      </div>
+      <div class="tilewarn" id="tilewarn">
+        지도 배경이 안 보이나요?<br>이 화면을 <b>사파리·크롬</b>에서 열어주세요.<br>
+        <span style="font-size:.75rem;color:#8fa3b3">앱 안의 미리보기 창은 지도 타일을 차단할 수 있어요.</span><br>
+        <button onclick="document.getElementById('tilewarn').classList.remove('show')">닫기</button>
+      </div>
+      <div class="datanote" id="datanote">데이터 불러오는 중…</div>
+      <div class="toast" id="toast"></div>
+    </div>
+
+    <aside class="ad-col right">
+      <div class="ad-row">
+        <div class="ad-slot filled" id="ad-r1">
+          <span class="ad-tag">AD</span>
+          <a href="https://m.place.naver.com/place/37081677/home?entry=plt" target="_blank" rel="noopener">
+            <div class="ad-inner">
+              <div class="ad-emoji">🪄</div>
+              <div class="ad-title">강릉 수상한마법학교 시즌2</div>
+              <div class="ad-sub">아이와 함께, 마술이 시작된다</div>
+            </div>
+          </a>
+        </div>
+        <div class="ad-slot" id="ad-r2"><span class="ad-tag">광고</span><div class="ad-inner">광고 R2</div></div>
+      </div>
+      <div class="ad-contact">광고문의 <b>05x@naver.com</b></div>
+    </aside>
+  </div>
+
+  <section class="news-panel">
+    <h2>🎪 속초 축제·행사 소식 <span class="tag">자동 업데이트</span></h2>
+    <div class="news-list" id="newsList">
+      <div class="news-empty">소식을 불러오는 중입니다…</div>
+    </div>
+  </section>
+
+  <section class="seo-list">
+    <details>
+      <summary>속초맛집 전체 목록 보기 (지역별 11개 구역)</summary>
+      <p class="seo-intro">속초맛집 지도에 등록된 중앙시장 먹거리촌, 아바이마을, 청초호, 영랑호 카페거리, 동명항 포차·생선구이거리, 대포항·조양동 소품샵 등 속초 전 지역 맛집·카페·베이커리·소품샵 목록입니다.</p>
+      <div class="seo-zone"><h3>속초중앙시장 먹거리촌</h3><ul><li>속초관광수산시장 <span>· 전통시장 · 먹거리</span></li><li>만석닭강정 중앙시장점 <span>· 닭강정</span></li><li>중앙닭강정 <span>· 닭강정 원조</span></li><li>예스닭강정 속초중앙시장점 <span>· 닭강정 (오징어먹물)</span></li><li>황부자 <span>· 누룽지오징어순대 · 새우튀김</span></li><li>도리스 파티세리 <span>· 에그타르트 베이커리</span></li><li>속초마약강정 <span>· 전통과자 · 오란다</span></li><li>속초 황금물회 <span>· 물회 (중앙시장 내)</span></li><li>88생선구이 <span>· 생선구이 · 중앙시장 생선구이골목</span></li></ul></div><div class="seo-zone"><h3>아바이마을</h3><ul><li>북청 전통 아바이순대 <span>· 아바이순대</span></li><li>2대송림순대집 아바이마을본점 <span>· 오징어순대</span></li><li>아바이순대국 <span>· 순대국</span></li></ul></div><div class="seo-zone"><h3>청초호 일원</h3><ul><li>청초수물회 <span>· 물회 · 호수뷰</span></li></ul></div><div class="seo-zone"><h3>영랑호·해변 카페거리</h3><ul><li>할리스 속초영랑해변점 <span>· 카페 · 오션뷰</span></li><li>Another Blue <span>· 오션뷰 카페</span></li><li>카페 우디 <span>· 오션뷰 카페</span></li><li>커피해요 <span>· 오션뷰 카페</span></li><li>바다담다 <span>· 오션뷰 카페</span></li></ul></div><div class="seo-zone"><h3>봉포 마늘빵거리</h3><ul><li>봉브레드 <span>· 마늘빵 베이커리</span></li></ul></div><div class="seo-zone"><h3>대포항 소품샵</h3><ul><li>대포항 선물가게 <span>· 소품샵 · 기념품</span></li></ul></div><div class="seo-zone"><h3>조양동 소품샵</h3><ul><li>희희훌훌 <span>· 소품샵 · 기념품</span></li></ul></div><div class="seo-zone"><h3>교동 보구밍상점 일원</h3><ul><li>보구밍상점 <span>· 베이커리 · 소품샵</span></li></ul></div><div class="seo-zone"><h3>단천면옥 일원</h3><ul><li>단천면옥 <span>· 북한식 냉면</span></li></ul></div><div class="seo-zone"><h3>설악동 카페너래</h3><ul><li>카페너래 <span>· 카페 · 설악뷰</span></li></ul></div><div class="seo-zone"><h3>동명항 포차·생선구이거리</h3><ul><li>속초포장마차거리 <span>· 포장마차거리</span></li><li>동명항포차 <span>· 포장마차 · 회</span></li><li>당근마차 <span>· 포장마차 · 골뱅이무침</span></li><li>알찬생선구이 <span>· 생선구이 · 해물탕</span></li><li>동명항생선숯불구이 <span>· 생선숯불구이</span></li></ul></div>
+    </details>
+  </section>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <div class="s-head">
+    <div><div class="s-name" id="sName">-</div><div class="s-cat" id="sCat">-</div><div class="s-dist" id="sDist"></div></div>
+    <button class="s-close" onclick="closeSheet()">✕</button>
+  </div>
+  <div class="status" id="sStatus">
+    <div><div class="big" id="sLevel">-</div><div class="sub" id="sDesc">-</div></div>
+    <div class="pct"><b id="sPct">-</b><span>혼잡도 지수</span></div>
+  </div>
+  <div class="srcline" id="sSrc"></div>
+  <div class="waitline" id="sWait"></div>
+  <div class="chart-title">시간대별 혼잡도 <span class="hint" id="dayHint"></span></div>
+  <div class="chart" id="chart"></div>
+  <div class="hours" id="hourLabels"></div>
+  <div class="slider-row">
+    <label>다른 시간 미리보기 <output id="tOut">지금</output></label>
+    <input type="range" id="tSlider" min="9" max="23" step="1">
+  </div>
+  <button class="nowbtn" onclick="resetNow()">지금 시각으로 보기</button>
+</div>
+
+<script>
+/* ═══════════ 맛집 목록 (구글 지도 실제 좌표로 검증) ═══════════ */
+const PLACES = [
+  {name:"속초관광수산시장", cat:"전통시장 · 먹거리", lat:38.2044495, lng:128.5901534, pattern:"market", pop:1.35},
+  {name:"만석닭강정 중앙시장점", cat:"닭강정", lat:38.2044423, lng:128.5900381, pattern:"market", pop:1.2},
+  {name:"중앙닭강정", cat:"닭강정 원조", lat:38.2047841, lng:128.5898788, pattern:"market", pop:1.15},
+  {name:"예스닭강정 속초중앙시장점", cat:"닭강정 (오징어먹물)", lat:38.2056117, lng:128.5887364, pattern:"market", pop:1.1},
+  {name:"황부자", cat:"누룽지오징어순대 · 새우튀김", lat:38.2048649, lng:128.5899043, pattern:"meal", pop:1.3},
+  {name:"도리스 파티세리", cat:"에그타르트 베이커리", lat:38.2038334, lng:128.5897526, pattern:"bakery", pop:1.25},
+  {name:"속초마약강정", cat:"전통과자 · 오란다", lat:38.2049679, lng:128.5879638, pattern:"bakery", pop:0.95},
+  {name:"속초 황금물회", cat:"물회 (중앙시장 내)", lat:38.2038561, lng:128.5899235, pattern:"meal", pop:1.1},
+
+  {name:"북청 전통 아바이순대", cat:"아바이순대", lat:38.2021528, lng:128.5937611, pattern:"meal", pop:1.15},
+  {name:"2대송림순대집 아바이마을본점", cat:"오징어순대", lat:38.2024500, lng:128.5939297, pattern:"meal", pop:1.05},
+  {name:"아바이순대국", cat:"순대국", lat:38.2111269, lng:128.5939469, pattern:"meal", pop:0.95},
+
+  {name:"청초수물회", cat:"물회 · 호수뷰", lat:38.1921359, lng:128.5904217, pattern:"meal", pop:1.2},
+
+  {name:"할리스 속초영랑해변점", cat:"카페 · 오션뷰", lat:38.2181431, lng:128.5937599, pattern:"cafe", pop:1.1},
+  {name:"Another Blue", cat:"오션뷰 카페", lat:38.2267592, lng:128.5873502, pattern:"cafe", pop:1.15},
+  {name:"카페 우디", cat:"오션뷰 카페", lat:38.2165824, lng:128.5952247, pattern:"cafe", pop:1.1},
+  {name:"커피해요", cat:"오션뷰 카페", lat:38.2161360, lng:128.5957052, pattern:"cafe", pop:1.0},
+  {name:"바다담다", cat:"오션뷰 카페", lat:38.2128003, lng:128.6010315, pattern:"cafe", pop:1.0},
+
+  {name:"봉브레드", cat:"마늘빵 베이커리", lat:38.2029295, lng:128.5684361, pattern:"bakery", pop:1.3},
+
+  {name:"대포항 선물가게", cat:"소품샵 · 기념품", lat:38.1745245, lng:128.6061033, pattern:"shop", pop:1.0},
+
+  {name:"희희훌훌", cat:"소품샵 · 기념품", lat:38.1864087, lng:128.6034749, pattern:"shop", pop:0.95},
+  {name:"보구밍상점", cat:"베이커리 · 소품샵", lat:38.1989640, lng:128.5806822, pattern:"shop", pop:1.0},
+
+  {name:"단천면옥", cat:"북한식 냉면", lat:38.1925394, lng:128.5823362, pattern:"meal", pop:1.2},
+
+  {name:"카페너래", cat:"카페 · 설악뷰", lat:38.2062594, lng:128.5204621, pattern:"cafe", pop:1.05},
+
+  /* ↓ 신규 추가: 88생선구이(중앙시장 생선구이골목) + 동명항 포차·생선구이거리 */
+  {name:"88생선구이", cat:"생선구이 · 중앙시장 생선구이골목", lat:38.2037191, lng:128.5918819, pattern:"meal", pop:1.25},
+  {name:"속초포장마차거리", cat:"포장마차거리", lat:38.2159969, lng:128.5958357, pattern:"pocha", pop:1.1},
+  {name:"동명항포차", cat:"포장마차 · 회", lat:38.2122562, lng:128.5999734, pattern:"pocha", pop:1.0},
+  {name:"당근마차", cat:"포장마차 · 골뱅이무침", lat:38.2128003, lng:128.6010314, pattern:"pocha", pop:1.05},
+  {name:"알찬생선구이", cat:"생선구이 · 해물탕", lat:38.2116275, lng:128.5945555, pattern:"meal", pop:1.0},
+  {name:"동명항생선숯불구이", cat:"생선숯불구이", lat:38.2109885, lng:128.5863226, pattern:"meal", pop:1.05},
+];
+
+const PROFILES = {
+  meal:  [2,1,1,1,1,2,4,8,15,25,45,80,95,70,40,30,35,55,85,90,60,30,12,5],
+  cafe:  [1,1,1,1,1,1,2,5,15,30,45,55,65,80,90,85,75,60,50,40,30,20,10,4],
+  pocha: [15,8,3,1,1,1,1,2,4,6,10,25,35,25,20,25,35,55,80,95,98,90,70,40],
+  pub:   [20,10,4,1,1,1,1,1,2,3,5,10,20,15,12,15,25,45,70,90,95,92,75,45],
+  market:[1,1,1,1,1,2,5,15,30,50,70,85,90,80,70,65,60,55,45,30,15,8,3,1],
+  bakery:[1,1,1,1,1,2,5,20,40,60,75,85,80,70,75,80,70,55,40,25,12,5,2,1],
+  shop:  [1,1,1,1,1,1,1,2,5,15,35,55,65,70,75,80,75,65,50,35,20,10,5,2],
+};
+function hashJitter(name,hour,day){let h=0;const s=name+hour+day;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return (h%21)-10;}
+
+let LIVE={}, DATA_MODE="demo";
+const dayNames=["sun","mon","tue","wed","thu","fri","sat"];
+function getCongestion(place,hour,isWeekend,day){
+  const live=LIVE[place.name];const nowH=new Date().getHours();const dow=dayNames[new Date().getDay()];
+  if(live){
+    if(liveMode&&hour===nowH&&live.current!=null) return clampV(live.current);
+    if(live.weekly&&live.weekly[dow]){let v=live.weekly[dow][hour];if(live.footfall!=null)v=v*0.8+live.footfall*0.2;return clampV(v);}
+  }
+  const base=PROFILES[place.pattern][hour];const weekendBoost=isWeekend?1.28:1.0;
+  return clampV(base*place.pop*weekendBoost+hashJitter(place.name,hour,day));
+}
+function clampV(v){return Math.max(0,Math.min(100,Math.round(v)));}
+function levelInfo(v){
+  if(v<=35)return{label:"여유",color:"#1F9D6B",cls:"free",desc:"바로 입장 가능해요",wait:"대기 거의 없음"};
+  if(v<=65)return{label:"보통",color:"#F0A93B",cls:"normal",desc:"자리가 조금 있어요",wait:"예상 대기 약 10~20분"};
+  if(v<=85)return{label:"혼잡",color:"#E5484D",cls:"busy",desc:"사람이 많아요",wait:"예상 대기 약 30~50분"};
+  return{label:"매우 혼잡",color:"#B3202C",cls:"verybusy",desc:"피크 타임이에요",wait:"예상 대기 1시간 이상"};
+}
+
+/* ═══════════ 지도 (벡터 방식 + 병원·약국 아이콘만 제거) ═══════════ */
+const map=L.map('map',{
+  zoomControl:false,
+  scrollWheelZoom:true, doubleClickZoom:true, touchZoom:true, boxZoom:true, keyboard:true,
+  maxZoom:19, minZoom:9,
+}).setView([38.204,128.592],14);
+L.control.zoom({position:'bottomright'}).addTo(map);
+
+let tileOK=false;
+const tilewarnEl=document.getElementById('tilewarn');
+
+/* 실패할 경우를 대비한 예전 방식(래스터 타일) 폴백. 평소엔 안 쓰인다. */
+function startRasterFallback(){
+  const PROVIDERS=[
+    {name:"CARTO-Positron", url:"https://a.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}.png"},
+    {name:"OSM",   url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png"},
+    {name:"Esri",  url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"},
+  ];
+  let curLayer=null, provErr=0;
+  function useProvider(i){
+    if(i>=PROVIDERS.length){ if(!tileOK) tilewarnEl.classList.add('show'); return; }
+    if(curLayer) map.removeLayer(curLayer);
+    provErr=0;
+    curLayer=L.tileLayer(PROVIDERS[i].url,{maxZoom:19,attribution:'&copy; '+PROVIDERS[i].name});
+    curLayer.on('load',()=>{tileOK=true;tilewarnEl.classList.remove('show');});
+    curLayer.on('tileerror',()=>{provErr++;if(provErr>=8&&!tileOK){useProvider(i+1);}});
+    curLayer.addTo(map);
+  }
+  useProvider(0);
+}
+
+/* 벡터 지도(OpenFreeMap "Liberty" 스타일 — 예전에 좋다고 하신 OSM 느낌 그대로)를 불러온 뒤,
+   스타일 안에서 "병원"·"약국" 아이콘을 그리는 부분만 걸러내고 나머지는 그대로 쓴다.
+   병원 부지의 옅은 색칠(landuse) 자체는 지도의 자연스러운 부분이라 그대로 둔다 —
+   빨간 십자가/약국 아이콘처럼 눈에 띄는 "표시"만 없앤다. */
+async function loadKoreanFriendlyBasemap(){
+  try{
+    const res=await fetch('https://tiles.openfreemap.org/styles/liberty');
+    if(!res.ok) throw new Error('style fetch failed');
+    const style=await res.json();
+    const hideClasses=["hospital","pharmacy"];
+    const poiLayerIds=["poi_r20","poi_r7","poi_r1"];
+    style.layers.forEach(layer=>{
+      if(poiLayerIds.includes(layer.id)){
+        layer.filter=["all", layer.filter, ["!",["match",["get","class"],hideClasses,true,false]]];
+      }
+    });
+    const gl=L.maplibreGL({
+      style,
+      attribution:'&copy; <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    });
+    gl.addTo(map);
+    gl.getMaplibreMap().on('load',()=>{tileOK=true;tilewarnEl.classList.remove('show');});
+    gl.getMaplibreMap().on('error',()=>{ if(!tileOK){ map.removeLayer(gl); startRasterFallback(); } });
+    setTimeout(()=>{ if(!tileOK) startRasterFallback(); },6000);
+  }catch(e){
+    startRasterFallback();
+  }
+}
+loadKoreanFriendlyBasemap();
+function fixSize(){map.invalidateSize();}
+setTimeout(fixSize,300);
+setTimeout(()=>{if(!tileOK)tilewarnEl.classList.add('show');},9000);
+window.addEventListener('resize',fixSize);
+new ResizeObserver(fixSize).observe(document.getElementById('mapCard'));
+
+const now=new Date();
+let viewHour=now.getHours();let liveMode=true;
+const isWeekend=[0,6].includes(now.getDay());const dayKey=now.toISOString().slice(0,10);
+document.getElementById('dayHint').textContent=isWeekend?'주말 패턴':'평일 패턴';
+function tickClock(){const n=new Date();document.getElementById('clock').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')+' 실시간';}
+tickClock();setInterval(tickClock,30000);
+
+/* ═══════════ 마커 ═══════════ */
+const markers=[];let selectedName=null;
+function showLabels(){return map.getZoom()>=15;}
+function makeIcon(place,hour){
+  const v=getCongestion(place,hour,isWeekend,dayKey);const li=levelInfo(v);
+  const sel=place.name===selectedName;const hide=(!showLabels()&&!sel)?'hideLabel':'';
+  return L.divIcon({className:'',iconSize:[0,0],html:
+    '<div class="pin '+li.cls+' '+hide+' '+(sel?'sel':'')+'"><div class="dotpin" style="background:'+li.color+'"></div><div class="label" style="border-color:'+li.color+'">'+place.name+'</div></div>'});
+}
+PLACES.forEach(p=>{
+  const m=L.marker([p.lat,p.lng],{icon:makeIcon(p,viewHour)}).addTo(map);
+  m.on('click',()=>{selectedName=p.name;openSheet(p);refreshMarkers();});
+  markers.push({place:p,marker:m});
+});
+
+/* ═══════════ 지역 단위 혼잡도 원 (코로나맵 스타일) ═══════════ */
+const ZONES=[
+  {name:"속초중앙시장 먹거리촌", lat:38.20454, lng:128.58961, radius:350,
+   members:["속초관광수산시장","만석닭강정 중앙시장점","중앙닭강정","예스닭강정 속초중앙시장점","황부자","도리스 파티세리","속초마약강정","속초 황금물회","88생선구이"]},
+  {name:"아바이마을", lat:38.2052, lng:128.5939, radius:600,
+   members:["북청 전통 아바이순대","2대송림순대집 아바이마을본점","아바이순대국"]},
+  {name:"청초호 일원", lat:38.1921, lng:128.5904, radius:500,
+   members:["청초수물회"]},
+  {name:"영랑호·해변 카페거리", lat:38.2181, lng:128.5946, radius:1300,
+   members:["할리스 속초영랑해변점","Another Blue","카페 우디","커피해요","바다담다"]},
+  {name:"봉포 마늘빵거리", lat:38.2029, lng:128.5684, radius:500,
+   members:["봉브레드"]},
+  {name:"대포항 소품샵", lat:38.1745, lng:128.6061, radius:500,
+   members:["대포항 선물가게"]},
+  {name:"조양동 소품샵", lat:38.1864, lng:128.6035, radius:500,
+   members:["희희훌훌"]},
+  {name:"교동 보구밍상점 일원", lat:38.1990, lng:128.5807, radius:500,
+   members:["보구밍상점"]},
+  {name:"단천면옥 일원", lat:38.1925, lng:128.5823, radius:500,
+   members:["단천면옥"]},
+  {name:"설악동 카페너래", lat:38.2063, lng:128.5205, radius:500,
+   members:["카페너래"]},
+  {name:"동명항 포차·생선구이거리", lat:38.2127, lng:128.5955, radius:1100,
+   members:["속초포장마차거리","동명항포차","당근마차","알찬생선구이","동명항생선숯불구이"]},
+];
+function zoneAvg(zone,hour){
+  const vals=zone.members.map(n=>{const p=PLACES.find(x=>x.name===n);return p?getCongestion(p,hour,isWeekend,dayKey):0;});
+  return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):0;
+}
+function zoneStyle(v,zoomLv){
+  const li=levelInfo(v);
+  let fillOpacity=0.14+(v/100)*0.32, strokeOpacity=0.55;
+  if(zoomLv>=16){fillOpacity*=0.3;strokeOpacity*=0.4;}
+  return{color:li.color,weight:1.5,opacity:strokeOpacity,fillColor:li.color,fillOpacity};
+}
+const zoneCircles=ZONES.map(z=>{
+  const v=zoneAvg(z,viewHour);
+  const c=L.circle([z.lat,z.lng],{radius:z.radius,...zoneStyle(v,map.getZoom())}).addTo(map);
+  c.on('click',()=>{
+    const cv=zoneAvg(z,viewHour);const cli=levelInfo(cv);
+    map.flyToBounds(c.getBounds(),{duration:.6,maxZoom:15});
+    toast(z.name+' · 평균 혼잡도 '+cv+' · '+cli.label);
+  });
+  return{zone:z,circle:c};
+});
+function refreshZones(){
+  const zoomLv=map.getZoom();
+  zoneCircles.forEach(({zone,circle})=>{circle.setStyle(zoneStyle(zoneAvg(zone,viewHour),zoomLv));});
+}
+function refreshMarkers(){markers.forEach(({place,marker})=>marker.setIcon(makeIcon(place,viewHour)));refreshZones();}
+map.on('zoomend',refreshMarkers);
+
+/* ═══════════ 내 위치 ═══════════ */
+let userMarker=null,userCircle=null,userLatLng=null;
+const toastEl=document.getElementById('toast');let toastT=null;
+function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>toastEl.classList.remove('show'),2600);}
+function haversine(a,b,c,d){const R=6371,r=Math.PI/180;const dLat=(c-a)*r,dLng=(d-b)*r;const x=Math.sin(dLat/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(dLng/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+document.getElementById('locateBtn').addEventListener('click',()=>{
+  if(!navigator.geolocation){toast('이 브라우저는 위치를 지원하지 않아요');return;}
+  toast('내 위치 찾는 중…');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const lat=pos.coords.latitude, lng=pos.coords.longitude, accuracy=pos.coords.accuracy;
+    userLatLng=[lat,lng];
+    if(userMarker){userMarker.setLatLng(userLatLng);userCircle.setLatLng(userLatLng).setRadius(accuracy);}
+    else{
+      userMarker=L.marker(userLatLng,{icon:L.divIcon({className:'',iconSize:[0,0],html:'<div class="userdot"></div>'}),zIndexOffset:1000}).addTo(map);
+      userCircle=L.circle(userLatLng,{radius:accuracy,color:'#2D6E8E',fillColor:'#2D6E8E',fillOpacity:.12,weight:1}).addTo(map);
+    }
+    document.getElementById('locateBtn').classList.add('on');
+    map.flyTo(userLatLng,15,{duration:.8});
+    let best=null,bd=1e9;PLACES.forEach(p=>{const d=haversine(lat,lng,p.lat,p.lng);if(d<bd){bd=d;best=p;}});
+    toast(best?('내 위치 확인 · 가장 가까운 맛집은 '+best.name+' ('+(bd<1?Math.round(bd*1000)+'m':bd.toFixed(1)+'km')+')'):'내 위치를 찾았어요');
+    if(currentPlace)renderSheet();
+  },err=>{
+    toast(err.code===1?'위치 권한이 거부됐어요 (설정에서 허용)':'위치를 찾지 못했어요');
+  },{enableHighAccuracy:true,timeout:9000,maximumAge:30000});
+});
+
+/* ═══════════ 검색 ═══════════ */
+const searchInput=document.getElementById('search');const resultsBox=document.getElementById('results');
+searchInput.addEventListener('input',()=>{
+  const q=searchInput.value.trim();if(!q){resultsBox.classList.remove('show');return;}
+  const hits=PLACES.filter(p=>p.name.includes(q)||p.cat.includes(q));
+  resultsBox.innerHTML=hits.length?hits.map(p=>{const li=levelInfo(getCongestion(p,viewHour,isWeekend,dayKey));return '<div class="result-item" data-name="'+p.name+'"><div><div class="r-name">'+p.name+'</div><div class="r-cat">'+p.cat+'</div></div><span style="font-size:.75rem;font-weight:800;color:'+li.color+'">'+li.label+'</span></div>';}).join(''):'<div class="result-empty">"'+q+'" 검색 결과가 없어요</div>';
+  resultsBox.classList.add('show');
+});
+resultsBox.addEventListener('click',e=>{
+  const item=e.target.closest('.result-item');if(!item)return;
+  const p=PLACES.find(x=>x.name===item.dataset.name);
+  resultsBox.classList.remove('show');searchInput.value=p.name;searchInput.blur();selectedName=p.name;
+  map.flyTo([p.lat,p.lng],16,{duration:.8});setTimeout(()=>{openSheet(p);refreshMarkers();},500);
+});
+document.addEventListener('click',e=>{if(!e.target.closest('.searchwrap'))resultsBox.classList.remove('show');});
+
+/* ═══════════ 하단 시트 ═══════════ */
+const sheet=document.getElementById('sheet');const slider=document.getElementById('tSlider');let currentPlace=null;
+function openSheet(p){currentPlace=p;liveMode=true;viewHour=new Date().getHours();slider.value=Math.min(23,Math.max(9,viewHour));renderSheet();sheet.classList.add('open');}
+function closeSheet(){sheet.classList.remove('open');}
+function renderSheet(){
+  const p=currentPlace;if(!p)return;
+  const v=getCongestion(p,viewHour,isWeekend,dayKey);const li=levelInfo(v);const live=LIVE[p.name];
+  document.getElementById('sName').textContent=p.name;
+  document.getElementById('sCat').textContent=p.cat;
+  const distEl=document.getElementById('sDist');
+  if(userLatLng){const d=haversine(userLatLng[0],userLatLng[1],p.lat,p.lng);distEl.textContent='내 위치에서 '+(d<1?Math.round(d*1000)+'m':d.toFixed(1)+'km');}
+  else distEl.textContent='';
+  document.getElementById('sLevel').textContent=li.label;
+  document.getElementById('sDesc').textContent=li.desc;
+  document.getElementById('sPct').textContent=v;
+  document.getElementById('sStatus').style.background=li.color;
+  let srcTxt="";
+  if(live&&liveMode&&live.current!=null&&viewHour===new Date().getHours())srcTxt='<b>구글 실시간</b> 인구 데이터';
+  else if(live&&live.weekly)srcTxt='<b>실측 방문패턴</b> 기반'+(live.footfall!=null?' · 공공 유동인구 보정':'');
+  else srcTxt='업종 방문패턴 <b>추정치</b>';
+  document.getElementById('sSrc').innerHTML=srcTxt;
+  document.getElementById('sWait').textContent=(liveMode?"지금 ":viewHour+"시 기준 ")+li.wait+" · 혼잡도 "+v+"/100";
+  document.getElementById('tOut').textContent=liveMode?"지금":viewHour+":00";
+  const chart=document.getElementById('chart'),labels=document.getElementById('hourLabels');let bars="",labs="";
+  for(let h=9;h<=23;h++){const hv=getCongestion(p,h,isWeekend,dayKey),hli=levelInfo(hv);bars+='<div class="bar '+(h===viewHour?'now':'')+'" style="height:'+Math.max(4,hv)+'%;background:'+hli.color+'" data-h="'+h+'"></div>';labs+='<span>'+(h%3===0?h:'')+'</span>';}
+  chart.innerHTML=bars;labels.innerHTML=labs;
+  chart.querySelectorAll('.bar').forEach(b=>b.addEventListener('click',()=>{viewHour=+b.dataset.h;liveMode=false;slider.value=viewHour;renderSheet();refreshMarkers();}));
+}
+slider.addEventListener('input',()=>{viewHour=+slider.value;liveMode=(viewHour===new Date().getHours());renderSheet();refreshMarkers();});
+function resetNow(){viewHour=new Date().getHours();liveMode=true;slider.value=Math.min(23,Math.max(9,viewHour));renderSheet();refreshMarkers();}
+setInterval(()=>{if(liveMode){viewHour=new Date().getHours();refreshMarkers();if(sheet.classList.contains('open'))renderSheet();}},60000);
+
+/* ═══════════ 실데이터 로드 ═══════════ */
+async function loadRealData(){
+  try{
+    const res=await fetch('./congestion_data.json',{cache:'no-store'});
+    if(!res.ok)throw new Error('no file');
+    const json=await res.json();
+    (json.places||[]).forEach(row=>{
+      LIVE[row.name]={current:row.current!=null?row.current:null,weekly:row.weekly||null,footfall:row.footfall!=null?row.footfall:null,source:row.source,updated:row.updated};
+      const P=PLACES.find(p=>p.name===row.name);if(P&&row.lat&&row.lng){P.lat=row.lat;P.lng=row.lng;}
+    });
+    DATA_MODE="real";
+    document.getElementById('srcBadge').textContent="실시간";document.getElementById('srcBadge').className="src real";
+    document.getElementById('datanote').innerHTML='구글 인구 + 공공 유동인구 연동 · <b>'+(json.generated?new Date(json.generated).toLocaleString('ko-KR'):'')+'</b>';
+    markers.forEach(({place,marker})=>marker.setLatLng([place.lat,place.lng]));refreshMarkers();
+  }catch(e){
+    DATA_MODE="demo";
+    document.getElementById('srcBadge').textContent="추정";document.getElementById('srcBadge').className="src demo";
+    document.getElementById('datanote').innerHTML="혼잡도는 업종별 방문 패턴 기반 <b>추정치</b> (데모)";
+  }
+}
+loadRealData();setInterval(loadRealData,120000);
+
+/* ═══════════ 오늘 방문자수 (한국시간 0시~23시59분 기준으로 자동 리셋) ═══════════
+   무료 카운터 서비스(CounterAPI)를 쓴다. 이런 무료 서비스는 가끔 불안정할 수 있어서,
+   실패하면 그냥 조용히 숨긴다 (페이지가 깨지거나 이상한 값이 보이지 않도록). */
+const COUNTER_NAMESPACE = "sokcho-foodmap-sungbok"; // 다른 이름으로 바꿔도 됨
+function kstDateKey(){
+  return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul'}).format(new Date()).replace(/-/g,'');
+}
+async function loadVisitorCount(){
+  const badge=document.getElementById('visitorBadge');
+  const textEl=document.getElementById('visitorText');
+  try{
+    const key='visits-'+kstDateKey();
+    const res=await fetch('https://api.counterapi.dev/v1/'+COUNTER_NAMESPACE+'/'+key+'/up');
+    if(!res.ok) throw new Error('counter api error');
+    const data=await res.json();
+    const n=(data && (data.count!=null?data.count:data.value));
+    if(n==null) throw new Error('no count field');
+    textEl.textContent='오늘 방문자 '+Number(n).toLocaleString('ko-KR')+'명';
+    badge.classList.add('show');
+  }catch(e){
+    badge.classList.remove('show'); // 실패 시 조용히 숨김
+  }
+}
+loadVisitorCount();
+
+/* ═══════════ 속초 축제·행사 소식 (속초문화관광재단 공식 게시판 자동 수집) ═══════════ */
+async function loadFestivalNews(){
+  const listEl=document.getElementById('newsList');
+  try{
+    const res=await fetch('./festival_news.json',{cache:'no-store'});
+    if(!res.ok) throw new Error('no file');
+    const json=await res.json();
+    const items=(json.items||[]).slice(0,6);
+    if(!items.length) throw new Error('empty');
+    listEl.innerHTML=items.map(it=>
+      '<a class="news-item" href="'+it.url+'" target="_blank" rel="noopener">'+
+      '<span class="n-title">'+it.title+'</span>'+
+      '<span class="n-date">'+it.date+'</span></a>'
+    ).join('');
+  }catch(e){
+    listEl.innerHTML='<div class="news-empty">아직 소식이 연동되지 않았어요. '+
+      '<a href="http://sokchocf.or.kr/sokchocf/event/information" target="_blank" rel="noopener">속초문화관광재단 행사안내 바로가기</a></div>';
+  }
+}
+loadFestivalNews();setInterval(loadFestivalNews,300000);
+</script>
+</body>
+</html>
