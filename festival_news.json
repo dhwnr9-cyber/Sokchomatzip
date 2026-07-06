@@ -1,7 +1,12 @@
 {
-  "generated": "2026-07-06T11:43:32+00:00",
+  "generated": "2026-07-06T14:46:35+00:00",
   "source": "http://sokchocf.or.kr/sokchocf/event/information",
   "items": [
+    {
+      "title": "[축제] 2026 지역상생 문화동행 페스타",
+      "date": "2026-07-06",
+      "url": "http://sokchocf.or.kr/sokchocf/event/information"
+    },
     {
       "title": "[교육] 기초재단 협력사업 스타트업 <설악산 식물도감> 봄학기 참여자 모집",
       "date": "2026-05-09",
@@ -35,11 +40,6 @@
     {
       "title": "[행사·소식] 2025 문화도시 페스타",
       "date": "2025-12-18",
-      "url": "http://sokchocf.or.kr/sokchocf/event/information"
-    },
-    {
-      "title": "[교육] 2025 인문학프로그램 <지역의 맛, 그곳의 이야기>",
-      "date": "2025-12-09",
       "url": "http://sokchocf.or.kr/sokchocf/event/information"
     }
   ]
