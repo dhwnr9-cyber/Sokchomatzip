@@ -1,7 +1,12 @@
 {
-  "generated": "2026-07-07T01:20:41+00:00",
+  "generated": "2026-07-07T05:11:21+00:00",
   "source": "http://sokchocf.or.kr/sokchocf/event/information",
   "items": [
+    {
+      "title": "[공연·전시] 기획공연<아트박스: 어린이를 위한 문화공연지원사업> 공연 신청방법",
+      "date": "2026-07-13",
+      "url": "http://sokchocf.or.kr/sokchocf/event/information"
+    },
     {
       "title": "[축제] 2026 지역상생 문화동행 페스타",
       "date": "2026-07-06",
@@ -35,11 +40,6 @@
     {
       "title": "[공연·전시] (재)속초문화관광재단 기획전시 「아! 울산바위」",
       "date": "2026-01-16",
-      "url": "http://sokchocf.or.kr/sokchocf/event/information"
-    },
-    {
-      "title": "[행사·소식] 2025 문화도시 페스타",
-      "date": "2025-12-18",
       "url": "http://sokchocf.or.kr/sokchocf/event/information"
     }
   ]
