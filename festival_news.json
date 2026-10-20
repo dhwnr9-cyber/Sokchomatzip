@@ -1,7 +1,12 @@
 {
-  "generated": "2026-10-20T06:31:30+00:00",
+  "generated": "2026-10-20T12:02:32+00:00",
   "source": "http://sokchocf.or.kr/sokchocf/event/information",
   "items": [
+    {
+      "title": "[행사·소식] 2026 설악산 책방",
+      "date": "2026-10-24",
+      "url": "http://sokchocf.or.kr/sokchocf/event/information"
+    },
     {
       "title": "[공연·전시] 2026 실향민문화육성사업 <어린이 음악극 「바우깨비」>",
       "date": "2026-11-13",
@@ -35,11 +40,6 @@
     {
       "title": "[교육] 기초재단 협력사업 스타트업 <설악산 식물도감> 가을학기 참여자 모집",
       "date": "2026-08-24",
-      "url": "http://sokchocf.or.kr/sokchocf/event/information"
-    },
-    {
-      "title": "[공연·전시] 2026 속초 문화버스킹",
-      "date": "2026-07-25",
       "url": "http://sokchocf.or.kr/sokchocf/event/information"
     }
   ]
